@@ -1,0 +1,13 @@
+{
+  "name": "そらのクイズ",
+  "short_name": "そらのクイズ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#dff1ff",
+  "theme_color": "#7cc6fe",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="そらのクイズ">
+<meta name="theme-color" content="#7cc6fe">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<title>そらのクイズ</title>
+<style>
+:root {
+  --sky: #dff1ff;
+  --sky2: #b9e1ff;
+  --ink: #23324a;
+  --sub: #5b6b84;
+  --card: #ffffff;
+  --line: #d5e3f2;
+  --orange: #ff8a3d;
+  --orange-d: #e5701f;
+  --green: #2bb673;
+  --red: #ef5350;
+  --yellow: #ffd23f;
+  --blue: #3d8bfd;
+  --purple: #8e6cf0;
+  --land: #f3ecd9;
+  --land-line: #b8ab8b;
+  --sea: #cfe9fb;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Rounded Mplus 1c", system-ui, sans-serif;
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--sky2), var(--sky) 40%, #fff9ec);
+  -webkit-user-select: none; user-select: none;
+  touch-action: manipulation;
+  overflow-x: hidden;
+}
+#app {
+  min-height: 100%;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  max-width: 1100px; margin: 0 auto;
+  display: flex; flex-direction: column;
+}
+button { font: inherit; color: inherit; border: 0; cursor: pointer; }
+ruby rt { font-size: 0.5em; font-weight: 600; color: var(--sub); }
+
+/* ヘッダー */
+.top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; min-height: 52px; }
+.top h1 { font-size: 28px; margin: 0; flex: 1; }
+.back { background: var(--card); border-radius: 999px; padding: 10px 18px; font-size: 20px; font-weight: 700; box-shadow: 0 3px 0 var(--line); }
+.stars { background: var(--card); border-radius: 999px; padding: 8px 16px; font-size: 22px; font-weight: 800; box-shadow: 0 3px 0 var(--line); white-space: nowrap; }
+
+/* ホーム */
+.hero { text-align: center; margin: 8px 0 20px; }
+.hero .plane { font-size: 64px; display: inline-block; animation: fly 3s ease-in-out infinite; }
+.hero h1 { font-size: 40px; margin: 4px 0; letter-spacing: 2px; }
+.hero p { margin: 0; color: var(--sub); font-size: 18px; }
+@keyframes fly { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-8px) rotate(4deg); } }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.tile {
+  background: var(--card); border-radius: 24px; padding: 22px 16px; text-align: center;
+  box-shadow: 0 6px 0 var(--line); transition: transform .08s;
+}
+.tile:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--line); }
+.tile .ic { font-size: 58px; line-height: 1.1; }
+.tile .nm { font-size: 26px; font-weight: 800; margin-top: 6px; }
+.tile .ds { font-size: 15px; color: var(--sub); margin-top: 4px; }
+.tile.c1 { border-top: 8px solid var(--orange); }
+.tile.c2 { border-top: 8px solid var(--purple); }
+.tile.c3 { border-top: 8px solid var(--red); }
+.tile.c4 { border-top: 8px solid var(--green); }
+.tile.c5 { border-top: 8px solid var(--blue); }
+
+/* せってい */
+.panel { background: var(--card); border-radius: 24px; padding: 20px; box-shadow: 0 6px 0 var(--line); margin-bottom: 16px; }
+.panel h2 { margin: 0 0 12px; font-size: 22px; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip { background: #eef5fc; border-radius: 16px; padding: 14px 18px; font-size: 22px; font-weight: 700; border: 3px solid transparent; min-width: 64px; }
+.chip.on { background: #fff4e6; border-color: var(--orange); }
+.go {
+  display: block; width: 100%; margin-top: 8px; padding: 20px; border-radius: 22px; font-size: 30px; font-weight: 800;
+  background: var(--orange); color: #fff; box-shadow: 0 6px 0 var(--orange-d);
+}
+.go:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--orange-d); }
+
+/* クイズ */
+.progress { display: flex; gap: 6px; flex: 1; }
+.progress i { flex: 1; height: 12px; border-radius: 6px; background: #ffffffaa; }
+.progress i.ok { background: var(--green); }
+.progress i.ng { background: var(--red); }
+.progress i.now { background: var(--yellow); }
+.qbox { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.question { text-align: center; font-size: 30px; font-weight: 800; line-height: 1.5; }
+.question .big { font-size: 64px; letter-spacing: 2px; }
+.flagbig { font-size: 180px; line-height: 1.1; text-align: center; filter: drop-shadow(0 6px 8px #0002); }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.choice {
+  background: var(--card); border-radius: 20px; padding: 18px 10px; font-size: 26px; font-weight: 800; min-height: 84px;
+  box-shadow: 0 5px 0 var(--line); line-height: 1.4;
+}
+.choice.flag { font-size: 84px; padding: 6px; }
+.choice:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--line); }
+.choice.right { background: #d9f7e8; box-shadow: 0 5px 0 var(--green); }
+.choice.wrong { background: #ffe1e0; box-shadow: 0 5px 0 var(--red); }
+
+/* すうじ */
+.answer { display: flex; justify-content: center; }
+.answer span { min-width: 140px; padding: 6px 20px; background: #fff; border-radius: 18px; border: 4px solid var(--orange); font-size: 64px; font-weight: 800; text-align: center; min-height: 92px; }
+.pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 460px; width: 100%; margin: 0 auto; }
+.key { background: var(--card); border-radius: 18px; font-size: 40px; font-weight: 800; padding: 14px 0; box-shadow: 0 5px 0 var(--line); }
+.key:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--line); }
+.key.del { color: var(--red); font-size: 28px; }
+.key.ok { background: var(--orange); color: #fff; box-shadow: 0 5px 0 var(--orange-d); font-size: 28px; }
+
+/* 地図 */
+.mapwrap { background: var(--sea); border-radius: 22px; overflow: hidden; box-shadow: inset 0 0 0 3px #a9d4f2; position: relative; }
+.mapwrap svg { display: block; width: 100%; height: auto; max-height: 56vh; }
+.mapwrap.tall svg { max-height: 64vh; }
+.land { fill: var(--land); stroke: var(--land-line); stroke-linejoin: round; }
+.land.tap { cursor: pointer; }
+.land.hl { fill: var(--orange); stroke: #a8480b; }
+.land.right { fill: var(--green); stroke: #136b41; }
+.land.wrong { fill: var(--red); stroke: #8a1f1d; }
+.ring { fill: none; stroke: var(--red); stroke-dasharray: 6 5; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.inset { fill: #e7f4fd; stroke: #8fb7d6; stroke-dasharray: 8 6; }
+
+/* フィードバック */
+.fb {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 10;
+  background: #0003; animation: fade .15s;
+}
+.fb .card { background: #fff; border-radius: 28px; padding: 28px 36px; text-align: center; max-width: 90%; box-shadow: 0 10px 30px #0003; }
+.fb .mark { font-size: 110px; line-height: 1; }
+.fb .msg { font-size: 34px; font-weight: 800; margin-top: 6px; }
+.fb .ans { font-size: 28px; margin-top: 10px; line-height: 1.5; }
+.fb .next { margin-top: 16px; }
+@keyframes fade { from { opacity: 0; } }
+
+/* けっか */
+.result { text-align: center; }
+.result .score { font-size: 72px; font-weight: 900; }
+.result .starrow { font-size: 56px; letter-spacing: 4px; }
+.miss { text-align: left; font-size: 24px; line-height: 1.8; }
+.confetti { position: fixed; top: -40px; font-size: 32px; animation: fall linear forwards; pointer-events: none; z-index: 20; }
+@keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+
+.row { display: flex; gap: 12px; }
+.row > * { flex: 1; }
+.ghost { background: var(--card); color: var(--ink); box-shadow: 0 6px 0 var(--line); }
+.ghost:active { box-shadow: 0 2px 0 var(--line); }
+.note { color: var(--sub); font-size: 15px; text-align: center; margin-top: 14px; }
+
+@media (max-width: 700px) {
+  .question { font-size: 24px; }
+  .question .big { font-size: 48px; }
+  .choice { font-size: 20px; min-height: 70px; }
+  .flagbig { font-size: 130px; }
+}
+@media (orientation: landscape) and (min-width: 900px) {
+  .split { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; align-items: start; }
+  .split .choices { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(function () {});
+}
+</script>
+</body>
+</html>
