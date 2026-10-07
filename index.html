@@ -76,6 +76,14 @@ ruby rt { font-size: 0.5em; font-weight: 600; color: var(--sub); }
 .tile.c4 { border-top: 8px solid var(--green); }
 .tile.c5 { border-top: 8px solid var(--blue); }
 .tile.c6 { border-top: 8px solid var(--yellow); }
+.tile.c7 { border-top: 8px solid #ff6fa8; }
+.enrow { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.speak { background: var(--blue); color: #fff; border-radius: 999px; padding: 16px 34px; font-size: 40px; font-weight: 800; box-shadow: 0 6px 0 #2a64b8; }
+.speak span { font-size: 24px; vertical-align: middle; }
+.speak:active { transform: translateY(4px); box-shadow: 0 2px 0 #2a64b8; }
+.enword { font-size: 44px; font-weight: 800; font-family: -apple-system, "Helvetica Neue", sans-serif; letter-spacing: 1px; }
+.choice.pic { font-size: 84px; padding: 4px; line-height: 1.2; }
+.choice.num { font-size: 64px; }
 .clock { font-variant-numeric: tabular-nums; min-width: 120px; text-align: center; }
 .result .time { font-size: 40px; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .best { font-size: 20px; color: var(--sub); margin: 6px 0; }
@@ -177,6 +185,7 @@ ruby rt { font-size: 0.5em; font-weight: 600; color: var(--sub); }
 <body>
 <div id="app"></div>
 <script src="data.js"></script>
+<script src="english.js"></script>
 <script src="app.js"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {

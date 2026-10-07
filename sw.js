@@ -1,8 +1,12 @@
 // 一度ひらけば、機内（オフライン）でも動くように全部を保存しておく
-var CACHE = 'sora-quiz-v4';
-var FILES = ['./', 'index.html', 'app.js', 'data.js', 'manifest.json', 'icon-180.png', 'icon-512.png'];
+var CACHE = 'sora-quiz-v5';
+var FILES = ['./', 'index.html', 'app.js', 'data.js', 'english.js', 'manifest.json', 'icon-180.png', 'icon-512.png'];
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(CACHE).then(function (c) {
+    // えいごの こえ（audio/en/*.m4a）の いちらんは precache.json に ある
+    return fetch('precache.json', { cache: 'no-store' }).then(function (r) { return r.json(); })
+      .then(function (audio) { return c.addAll(FILES.concat(audio)); });
+  }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) {

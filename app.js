@@ -46,7 +46,6 @@
   var actx = null;
   // iPad は タッチの しゅんかんに おとを「おこして」おかないと ならないので、タッチの たびに じゅんびする
   function unlockAudio() {
-    if (!store.get('sound', false)) return;
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
       if (actx.state === 'suspended') actx.resume();
@@ -150,6 +149,7 @@
       ['c3', '🏳️', 'こっき', 'こっきを みて あてよう', flagSetup],
       ['c4', '🗾', 'にほんちず', 'とどうふけんを あてよう', function () { mapSetup('japan'); }],
       ['c5', '🌏', 'せかいちず', 'くにを あてよう', function () { mapSetup('world'); }],
+      ['c7', '🔤', 'えいご', 'きいて えを えらぼう', englishSetup],
       ['c6', '🏆', 'きろく', 'タイムと いちばんの きろく', recordsScreen],
     ];
     var sound = store.get('sound', false);
@@ -472,6 +472,69 @@
             ]);
           },
         }, flagRec);
+      } })]);
+  }
+
+  // ---------- えいご ----------
+  var EN = window.EN_DATA || [];
+  var voiceBuf = {};
+  function loadVoice(file, cb) {
+    if (voiceBuf[file]) return cb(voiceBuf[file]);
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      fetch(file).then(function (r) { return r.arrayBuffer(); }).then(function (ab) {
+        actx.decodeAudioData(ab, function (buf) { voiceBuf[file] = buf; cb(buf); }, function () {});
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  var nowVoice = null;
+  function speak(file) {
+    loadVoice(file, function (buf) {
+      try {
+        if (actx.state === 'suspended') actx.resume();
+        if (nowVoice) { try { nowVoice.stop(); } catch (e) {} }
+        var src = actx.createBufferSource(), g = actx.createGain();
+        g.gain.value = 1.0;
+        src.buffer = buf; src.connect(g); g.connect(actx.destination); src.start();
+        nowVoice = src;
+      } catch (e) {}
+    });
+  }
+  function englishSetup() {
+    var cat = chipGroup('どの ことば？', EN.map(function (c) { return [c.id, c.icon + ' ' + c.title]; }).concat([['all', '🔀 ぜんぶ まぜる']]), 'en-cat', 'fruit');
+    var txt = chipGroup('えいごの もじ', [['no', '🙈 みせない（きくだけ）'], ['yes', '👀 みせる']], 'en-text', 'no');
+    screen([header('えいご', home), cat.node, txt.node,
+      h('p', { class: 'note', text: '🔊 こえが でるよ。イヤホンを つかってね' }),
+      h('button', { class: 'go', text: 'スタート！', onclick: function () {
+        var cats = cat.val() === 'all' ? EN.filter(function (c) { return !c.text; }) : EN.filter(function (c) { return c.id === cat.val(); });
+        var all = [];
+        cats.forEach(function (c) { c.items.forEach(function (it) { all.push({ it: it, cat: c }); }); });
+        var qs = shuffle(all).slice(0, ROUND).map(function (x) {
+          var others = x.cat.items.filter(function (o) { return o.en !== x.it.en && o.pic !== x.it.pic; });
+          var choices = shuffle([x.it].concat(shuffle(others).slice(0, 3)));
+          var ans = '<br><span style="font-size:72px">' + esc(x.it.pic) + '</span><br><b>' + esc(x.it.en) + '</b><br>' + esc(x.it.ja);
+          return { item: x.it, cat: x.cat, choices: choices, review: x.it.pic + ' ' + esc(x.it.en) + '（' + esc(x.it.ja) + '）', answerHtml: ans };
+        });
+        var show = txt.val() === 'yes';
+        var title = cat.val() === 'all' ? 'ぜんぶ まぜる' : cats[0].title;
+        // さきに こえを よみこんでおく
+        qs.forEach(function (q) { loadVoice(q.item.file, function () {}); });
+        runChoiceQuiz('えいご', qs, englishSetup, {
+          body: function (q, answer) {
+            setTimeout(function () { speak(q.item.file); }, 250);
+            var again = h('button', { class: 'speak', html: '🔊 <span>もういちど きく</span>', onclick: function () { speak(q.item.file); } });
+            return h('div', { class: 'qbox' }, [
+              h('div', { class: 'question', text: 'きこえた ものは どれ？' }),
+              h('div', { class: 'enrow' }, [again, show ? h('div', { class: 'enword', text: q.item.en }) : null]),
+              h('div', { class: 'choices' }, q.choices.map(function (c) {
+                var b = h('button', { class: 'choice ' + (q.cat.text ? 'num' : 'pic'), 'data-id': c.id, text: c.pic });
+                b.addEventListener('click', function () { answer(c, b); });
+                return b;
+              })),
+            ]);
+          },
+          mark: function (q) { setTimeout(function () { speak(q.item.file); }, 300); },
+        }, { key: 'en-' + cat.val() + '-' + txt.val(), label: '🔤 えいご ' + title + (show ? '（もじ あり）' : '（きくだけ）') });
       } })]);
   }
 
