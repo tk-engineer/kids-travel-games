@@ -15,5 +15,5 @@
 ## 出典
 
 - 世界地図: [Natural Earth](https://www.naturalearthdata.com/)（パブリックドメイン）/ [world-atlas](https://github.com/topojson/world-atlas)
-- 日本地図: [jpn-atlas](https://github.com/vmapdev/jpn-atlas)（国土地理院 地球地図日本）BSD-3-Clause
+- 日本地図: [jpn-atlas](https://github.com/biskwikman/jpn-atlas)（国土地理院 地球地図日本）BSD-3-Clause
 - 国名・国旗: [mledoze/countries](https://github.com/mledoze/countries)（ODbL）
