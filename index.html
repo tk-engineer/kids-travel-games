@@ -75,6 +75,12 @@ ruby rt { font-size: 0.5em; font-weight: 600; color: var(--sub); }
 .tile.c3 { border-top: 8px solid var(--red); }
 .tile.c4 { border-top: 8px solid var(--green); }
 .tile.c5 { border-top: 8px solid var(--blue); }
+.tile.c6 { border-top: 8px solid var(--yellow); }
+.clock { font-variant-numeric: tabular-nums; min-width: 120px; text-align: center; }
+.result .time { font-size: 40px; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.best { font-size: 20px; color: var(--sub); margin: 6px 0; }
+.best.new { color: var(--orange-d); font-weight: 800; font-size: 24px; }
+.hist { font-size: 18px; color: var(--sub); line-height: 1.8; font-variant-numeric: tabular-nums; }
 
 /* せってい */
 .panel { background: var(--card); border-radius: 24px; padding: 20px; box-shadow: 0 6px 0 var(--line); margin-bottom: 16px; }
@@ -174,6 +180,11 @@ ruby rt { font-size: 0.5em; font-weight: 600; color: var(--sub); }
 <script src="app.js"></script>
 <script>
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  // あたらしい版が とどいたら 1かいだけ よみなおす（はじめての インストールでは しない）
+  var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+  });
   navigator.serviceWorker.register('sw.js').catch(function () {});
 }
 </script>

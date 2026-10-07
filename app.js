@@ -82,6 +82,7 @@
       ['c3', '🏳️', 'こっき', 'こっきを みて あてよう', flagSetup],
       ['c4', '🗾', 'にほんちず', 'とどうふけんを あてよう', function () { mapSetup('japan'); }],
       ['c5', '🌏', 'せかいちず', 'くにを あてよう', function () { mapSetup('world'); }],
+      ['c6', '🏆', 'きろく', 'タイムと いちばんの きろく', recordsScreen],
     ];
     var sound = store.get('sound', false);
     screen([
@@ -139,7 +140,8 @@
           var k = kind.val() === 'mix' ? (rnd(2) ? 'add' : 'sub') : kind.val();
           qs.push(mathQ(k, lv.val()));
         }
-        runNumberQuiz('けいさん', qs, mathSetup);
+        var KL = { add: '➕ たしざん', sub: '➖ ひきざん', mix: '🔀 まぜる' }, LL = { 1: '1けた', 2: '2けた と 1けた', 3: '2けた どうし' };
+        runNumberQuiz('けいさん', qs, mathSetup, { key: 'math-' + kind.val() + '-' + lv.val(), label: 'けいさん ' + KL[kind.val()] + ' ' + LL[lv.val()] });
       } })]);
   }
   function mathQ(kind, lv) {
@@ -168,13 +170,16 @@
         var all = [];
         ds.forEach(function (d) { for (var j = 1; j <= 9; j++) all.push({ text: d + ' × ' + j, ans: d * j }); });
         var qs = order.val() === 'seq' && ds.length === 1 ? all.slice(0, 9) : shuffle(all).slice(0, ROUND);
-        runNumberQuiz('くく', qs, kukuSetup);
+        var seq = order.val() === 'seq' && ds.length === 1;
+        var dl = ds.length === 9 ? 'ぜんぶの だん' : ds.join('・') + ' の だん';
+        runNumberQuiz('くく', qs, kukuSetup, { key: 'kuku-' + ds.join('') + (seq ? '-seq' : ''), label: '✖️ くく ' + dl + (seq ? '（じゅんばん）' : '') });
       } })]);
   }
 
   // ---------- すうじで こたえる クイズ ----------
-  function runNumberQuiz(title, qs, again) {
+  function runNumberQuiz(title, qs, again, rec) {
     var i = 0, results = [];
+    clockReset();
     function show() {
       var q = qs[i], typed = '', answered = false;
       var ansSpan = h('span', { text: '' });
@@ -188,13 +193,14 @@
       }
       function check() {
         if (answered) return; answered = true; // れんだ よけ
+        clockStop();
         var ok = Number(typed) === q.ans;
         results.push({ ok: ok, q: q.text + ' = ' + q.ans, your: typed });
         feedback(ok, ok ? '' : q.text + ' = <b>' + q.ans + '</b>', next);
       }
       var keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', 'del', '0', 'ok'];
       screen([
-        h('div', { class: 'top' }, [h('button', { class: 'back', onclick: again, text: '← やめる' }), progress(results, qs.length)]),
+        h('div', { class: 'top' }, [h('button', { class: 'back', onclick: again, text: '← やめる' }), progress(results, qs.length), clockNode()]),
         h('div', { class: 'qbox' }, [
           h('div', { class: 'question' }, [h('div', { class: 'big', text: q.text + ' =' })]),
           h('div', { class: 'answer' }, [ansSpan]),
@@ -205,9 +211,61 @@
         ]),
       ]);
       upd();
+      clockStart();
     }
-    function next() { i++; if (i < qs.length) show(); else result(title, results, again); }
+    function next() { i++; if (i < qs.length) show(); else result(title, results, again, rec); }
     show();
+  }
+
+  // ---------- タイム（こたえを かんがえている じかんだけ はかる） ----------
+  var clock = { total: 0, t0: null, el: null };
+  function clockReset() { clock.total = 0; clock.t0 = null; }
+  function clockStart() { clock.t0 = Date.now(); }
+  function clockStop() { if (clock.t0 != null) { clock.total += Date.now() - clock.t0; clock.t0 = null; } }
+  function clockMs() { return clock.total + (clock.t0 != null ? Date.now() - clock.t0 : 0); }
+  function sec(ms) { return (ms / 1000).toFixed(1); }
+  function clockNode() {
+    clock.el = h('div', { class: 'stars clock', text: '⏱ ' + sec(clockMs()) });
+    return clock.el;
+  }
+  setInterval(function () {
+    if (clock.el && document.body.contains(clock.el)) clock.el.textContent = '⏱ ' + sec(clockMs());
+  }, 100);
+
+  // ---------- きろく ----------
+  function better(a, b) { // a が b より いい きろくか
+    if (!b) return true;
+    var ra = a.n / a.total, rb = b.n / b.total;
+    return ra > rb || (ra === rb && a.ms < b.ms);
+  }
+  function saveRecord(rec, n, total, ms) {
+    var all = store.get('records', {});
+    var r = all[rec.key] || { label: rec.label, best: null, history: [] };
+    var d = new Date();
+    var entry = { n: n, total: total, ms: ms, date: (d.getMonth() + 1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2) };
+    var prev = r.best;
+    var isBest = better(entry, prev);
+    if (isBest) r.best = entry;
+    r.label = rec.label;
+    r.last = Date.now();
+    r.history = [entry].concat(r.history).slice(0, 20);
+    all[rec.key] = r;
+    store.set('records', all);
+    return { isBest: isBest, prev: prev, best: r.best };
+  }
+  function recordsScreen() {
+    var all = store.get('records', {});
+    var keys = Object.keys(all).sort(function (a, b) { return (all[b].last || 0) - (all[a].last || 0); });
+    screen([header('🏆 きろく', home)].concat(keys.length ? keys.map(function (k) {
+      var r = all[k];
+      return h('div', { class: 'panel' }, [
+        h('h2', { html: r.label }),
+        h('div', { class: 'best', text: '🏆 いちばん: ' + r.best.n + ' / ' + r.best.total + ' もん ⏱ ' + sec(r.best.ms) + ' びょう（' + r.best.date + '）' }),
+        h('div', { class: 'hist', html: r.history.slice(0, 5).map(function (e) {
+          return e.date + '　' + e.n + ' / ' + e.total + '　⏱ ' + sec(e.ms) + ' びょう';
+        }).join('<br>') }),
+      ]);
+    }) : [h('div', { class: 'panel', text: 'まだ きろくが ないよ。ゲームを あそんでみよう！' })]));
   }
 
   function progress(results, n) {
@@ -239,9 +297,14 @@
     document.body.appendChild(fb);
   }
 
-  function result(title, results, again) {
+  function result(title, results, again, rec) {
     var n = results.filter(function (r) { return r.ok; }).length;
     store.set('stars', totalStars() + n);
+    var ms = clock.total;
+    var sv = saveRecord(rec, n, results.length, ms);
+    var bestLine = sv.isBest && sv.prev ? '🏆 しんきろく！（まえの いちばん: ' + sv.prev.n + ' / ' + sv.prev.total + ' もん ⏱ ' + sec(sv.prev.ms) + ' びょう）'
+      : sv.isBest ? '🏆 はじめての きろく！'
+      : 'いちばん: ' + sv.best.n + ' / ' + sv.best.total + ' もん ⏱ ' + sec(sv.best.ms) + ' びょう';
     var rate = n / results.length;
     var msg = rate === 1 ? 'ぜんもん せいかい！ 🎉' : rate >= 0.8 ? 'すごい！ もうすこしで ぜんぶ！' : rate >= 0.5 ? 'いいね！ その ちょうし！' : 'もういちど やってみよう！';
     var miss = results.filter(function (r) { return !r.ok; });
@@ -252,6 +315,8 @@
       h('div', { class: 'panel result' }, [
         h('div', { class: 'score', text: n + ' / ' + results.length }),
         h('div', { class: 'starrow', text: starrow }),
+        h('div', { class: 'time', text: '⏱ ' + sec(ms) + ' びょう' }),
+        h('div', { class: 'best' + (sv.isBest ? ' new' : ''), text: bestLine }),
         h('div', { class: 'question', text: msg }),
         h('p', { class: 'note', text: 'ほし ' + n + 'こ ゲット！ ぜんぶで ⭐ ' + totalStars() }),
       ]),
@@ -264,7 +329,7 @@
         h('button', { class: 'go', text: '🔁 もういちど', onclick: again }),
       ]),
     ]);
-    if (rate === 1) confetti();
+    if (rate === 1 || (sv.isBest && sv.prev)) confetti();
   }
   function confetti() {
     var em = ['⭐', '🎉', '✨', '🌺', '✈️', '🌈'];
@@ -279,13 +344,15 @@
   }
 
   // ---------- えらぶ クイズ（こっき・ちず） ----------
-  function runChoiceQuiz(title, qs, again, render) {
+  function runChoiceQuiz(title, qs, again, render, rec) {
     var i = 0, results = [];
+    clockReset();
     function show() {
       var q = qs[i];
       var locked = false;
       function answer(choice, btn) {
         if (locked) return; locked = true;
+        clockStop();
         var ok = choice === q.item;
         results.push({ ok: ok, q: q.review });
         render.mark && render.mark(q, choice, ok);
@@ -295,11 +362,12 @@
         setTimeout(function () { feedback(ok, ok ? '' : q.answerHtml, next); }, ok ? 250 : 700);
       }
       screen([
-        h('div', { class: 'top' }, [h('button', { class: 'back', onclick: again, text: '← やめる' }), progress(results, qs.length)]),
+        h('div', { class: 'top' }, [h('button', { class: 'back', onclick: again, text: '← やめる' }), progress(results, qs.length), clockNode()]),
         render.body(q, answer),
       ]);
+      clockStart();
     }
-    function next() { i++; if (i < qs.length) show(); else result(title, results, again); }
+    function next() { i++; if (i < qs.length) show(); else result(title, results, again, rec); }
     show();
   }
   function choiceButtons(q, answer, asFlag) {
@@ -321,6 +389,8 @@
           return { item: c, choices: shuffle([c].concat(pick(pool, 3, [c]))), review: c.flag + ' ' + label(c), answerHtml: '<br><span style="font-size:80px">' + c.flag + '</span><br>' + label(c) };
         });
         var f2n = mode.val() === 'f2n';
+        var flagRec = { key: 'flag-' + mode.val() + '-' + lv.val(),
+          label: '🏳️ こっき ' + (f2n ? 'こっき → なまえ' : 'なまえ → こっき') + '（' + (lv.val() === 'easy' ? 'ゆうめいな くに' : 'ぜんぶの くに') + '）' };
         runChoiceQuiz('こっき', qs, flagSetup, {
           body: function (q, answer) {
             return h('div', { class: 'qbox' }, f2n ? [
@@ -332,7 +402,7 @@
               choiceButtons(q, answer, true),
             ]);
           },
-        });
+        }, flagRec);
       } })]);
   }
 
@@ -459,7 +529,8 @@
         paths[q.item.id].classList.add('right');
         paths[q.item.id].parentNode.appendChild(paths[q.item.id]);
       },
-    });
+    }, { key: 'map-' + which + '-' + mode + '-' + area + (which === 'world' ? '-' + lv : ''),
+      label: (which === 'japan' ? '🗾 にほんちず ' : '🌏 せかいちず ') + (mode === 'hl' ? 'ひかった ところ' : 'タッチ') + '（' + (area === 'all' ? 'ぜんぶ' : area) + (which === 'world' ? (lv === 'easy' ? '・ゆうめいな くに' : '・ぜんぶの くに') : '') + '）' });
   }
 
   home();
