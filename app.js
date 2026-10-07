@@ -71,6 +71,63 @@
     } catch (e) {}
   }
 
+  // ---------- けっかはっぴょうの おと（せいかいの かずで かわる） ----------
+  function nf(name) { // 'C5' → しゅうはすう
+    var m = /^([A-G])(#?)(\d)$/.exec(name);
+    var semi = { C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 }[m[1]] + (m[2] ? 1 : 0) + (Number(m[3]) - 4) * 12;
+    return 440 * Math.pow(2, semi / 12);
+  }
+  function playTune(notes, bpm, vol) {
+    // notes: [おと（'C5 E5 G5' で わおん、'-' で やすみ）, はく]
+    if (!store.get('sound', false)) return;
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      var beat = 60 / bpm, t0 = actx.currentTime + 0.05, at = 0;
+      var master = actx.createGain(); master.gain.value = vol || 0.1;
+      var lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600;
+      master.connect(lp); lp.connect(actx.destination);
+      notes.forEach(function (n) {
+        var dur = n[1] * beat;
+        if (n[0] !== '-') n[0].split(' ').forEach(function (nm) {
+          ['sawtooth', 'triangle'].forEach(function (type, k) { // ラッパっぽい おと
+            var o = actx.createOscillator(), g = actx.createGain();
+            o.type = type; o.frequency.value = nf(nm);
+            var st = t0 + at, len = Math.max(dur * 0.92, 0.08);
+            g.gain.setValueAtTime(0.0001, st);
+            g.gain.exponentialRampToValueAtTime(k ? 0.9 : 0.35, st + 0.02);
+            g.gain.setValueAtTime(k ? 0.9 : 0.35, st + len * 0.7);
+            g.gain.exponentialRampToValueAtTime(0.0001, st + len);
+            o.connect(g); g.connect(master); o.start(st); o.stop(st + len + 0.02);
+          });
+        });
+        at += dur;
+      });
+    } catch (e) {}
+  }
+  var TUNES = {
+    // ぜんもん せいかい：ファンファーレ
+    perfect: [['G4', 1 / 3], ['G4', 1 / 3], ['G4', 1 / 3], ['C5 E5', 1.5], ['-', 0.25], ['A#4 D5', 0.75], ['C5 E5', 0.5], ['-', 0.25],
+      ['D5 F5', 0.5], ['C5 E5', 0.5], ['D5 F5', 0.5], ['E5 G5 C6', 2.5]],
+    // 8わり いじょう：げんきな ジングル
+    great: [['C5', 0.5], ['E5', 0.5], ['G5', 0.5], ['C6', 0.5], ['-', 0.25], ['G5', 0.5], ['C5 E5 C6', 1.75]],
+    // はんぶん いじょう：ジャジャーン
+    good: [['G4', 0.5], ['C5', 0.5], ['E5', 0.5], ['C5 E5 G5', 1.5]],
+    // もうすこし：やさしく「つぎ がんばろう」
+    try: [['E5', 0.5], ['D5', 0.5], ['C5', 0.5], ['D5', 0.5], ['C5 E5 G5', 1.5]],
+    // しんきろく：キラキラ
+    record: [['C6', 0.25], ['E6', 0.25], ['G6', 0.25], ['C7', 0.75]],
+  };
+  function resultSound(rate, newRecord) {
+    var tune = rate === 1 ? TUNES.perfect : rate >= 0.8 ? TUNES.great : rate >= 0.5 ? TUNES.good : TUNES.try;
+    var bpm = rate === 1 ? 132 : 150;
+    playTune(tune, bpm, 0.1);
+    if (newRecord) {
+      var len = tune.reduce(function (s, n) { return s + n[1]; }, 0) * 60 / bpm;
+      setTimeout(function () { playTune(TUNES.record, 160, 0.06); }, len * 1000 + 150);
+    }
+  }
+
   function totalStars() { return store.get('stars', 0); }
   function header(title, onBack) {
     return h('div', { class: 'top' }, [
@@ -341,6 +398,7 @@
       ]),
     ]);
     if (rate === 1 || (sv.isBest && sv.prev)) confetti();
+    resultSound(rate, sv.isBest && !!sv.prev);
   }
   function confetti() {
     var em = ['⭐', '🎉', '✨', '🌺', '✈️', '🌈'];
