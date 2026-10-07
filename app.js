@@ -44,10 +44,21 @@
 
   // ---------- おと（さいしょは オフ） ----------
   var actx = null;
+  // iPad は タッチの しゅんかんに おとを「おこして」おかないと ならないので、タッチの たびに じゅんびする
+  function unlockAudio() {
+    if (!store.get('sound', false)) return;
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+    } catch (e) {}
+  }
+  document.addEventListener('touchend', unlockAudio, true);
+  document.addEventListener('click', unlockAudio, true);
   function beep(ok) {
     if (!store.get('sound', false)) return;
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
       var notes = ok ? [660, 880] : [300, 220];
       notes.forEach(function (f, i) {
         var o = actx.createOscillator(), g = actx.createGain();
