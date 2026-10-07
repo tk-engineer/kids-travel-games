@@ -1,5 +1,5 @@
 // 一度ひらけば、機内（オフライン）でも動くように全部を保存しておく
-var CACHE = 'sora-quiz-v5';
+var CACHE = 'sora-quiz-v6';
 var FILES = ['./', 'index.html', 'app.js', 'data.js', 'english.js', 'manifest.json', 'icon-180.png', 'icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {

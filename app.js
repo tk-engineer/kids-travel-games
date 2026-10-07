@@ -500,22 +500,39 @@
       } catch (e) {}
     });
   }
+  // にていて まぎらわしい ものは おなじ もんだいに ださない
+  var EN_CONFUSE = [
+    ['Hello!', 'Goodbye!', 'Aloha!'],
+    ["I'm hungry.", 'Yummy!'],
+    ["I'm fine.", "I'm happy!"],
+    ['Thank you!', 'Water, please.'],
+    ['Good night!', "I'm sleepy."],
+  ];
+  function confusing(a, b) {
+    return EN_CONFUSE.some(function (g) { return g.indexOf(a.en) >= 0 && g.indexOf(b.en) >= 0; });
+  }
   function englishSetup() {
     var cat = chipGroup('どの ことば？', EN.map(function (c) { return [c.id, c.icon + ' ' + c.title]; }).concat([['all', '🔀 ぜんぶ まぜる']]), 'en-cat', 'fruit');
     var txt = chipGroup('えいごの もじ', [['no', '🙈 みせない（きくだけ）'], ['yes', '👀 みせる']], 'en-text', 'no');
-    screen([header('えいご', home), cat.node, txt.node,
+    var hint = chipGroup('えの したに いみを だす（あいさつ・かいわ だけ）', [['yes', '💬 だす'], ['no', '🙈 ださない']], 'en-hint', 'yes');
+    screen([header('えいご', home), cat.node, txt.node, hint.node,
       h('p', { class: 'note', text: '🔊 こえが でるよ。イヤホンを つかってね' }),
       h('button', { class: 'go', text: 'スタート！', onclick: function () {
         var cats = cat.val() === 'all' ? EN.filter(function (c) { return !c.text; }) : EN.filter(function (c) { return c.id === cat.val(); });
         var all = [];
         cats.forEach(function (c) { c.items.forEach(function (it) { all.push({ it: it, cat: c }); }); });
         var qs = shuffle(all).slice(0, ROUND).map(function (x) {
-          var others = x.cat.items.filter(function (o) { return o.en !== x.it.en && o.pic !== x.it.pic; });
-          var choices = shuffle([x.it].concat(shuffle(others).slice(0, 3)));
+          var others = x.cat.items.filter(function (o) { return o.en !== x.it.en && o.pic !== x.it.pic && !confusing(o, x.it); });
+          var choices = [x.it];
+          shuffle(others).forEach(function (o) {
+            if (choices.length < 4 && !choices.some(function (c) { return confusing(c, o); })) choices.push(o);
+          });
+          choices = shuffle(choices);
           var ans = '<br><span style="font-size:72px">' + esc(x.it.pic) + '</span><br><b>' + esc(x.it.en) + '</b><br>' + esc(x.it.ja);
           return { item: x.it, cat: x.cat, choices: choices, review: x.it.pic + ' ' + esc(x.it.en) + '（' + esc(x.it.ja) + '）', answerHtml: ans };
         });
         var show = txt.val() === 'yes';
+        var withHint = hint.val() === 'yes' && cats.some(function (c) { return c.id === 'phrase'; });
         var title = cat.val() === 'all' ? 'ぜんぶ まぜる' : cats[0].title;
         // さきに こえを よみこんでおく
         qs.forEach(function (q) { loadVoice(q.item.file, function () {}); });
@@ -527,14 +544,16 @@
               h('div', { class: 'question', text: 'きこえた ものは どれ？' }),
               h('div', { class: 'enrow' }, [again, show ? h('div', { class: 'enword', text: q.item.en }) : null]),
               h('div', { class: 'choices' }, q.choices.map(function (c) {
-                var b = h('button', { class: 'choice ' + (q.cat.text ? 'num' : 'pic'), 'data-id': c.id, text: c.pic });
+                var b = h('button', { class: 'choice ' + (q.cat.text ? 'num' : 'pic'), 'data-id': c.id }, [c.pic]);
+                if (withHint && q.cat.id === 'phrase') b.appendChild(h('div', { class: 'hint', text: c.ja.replace(/（.*?）/, '') }));
                 b.addEventListener('click', function () { answer(c, b); });
                 return b;
               })),
             ]);
           },
           mark: function (q) { setTimeout(function () { speak(q.item.file); }, 300); },
-        }, { key: 'en-' + cat.val() + '-' + txt.val(), label: '🔤 えいご ' + title + (show ? '（もじ あり）' : '（きくだけ）') });
+        }, { key: 'en-' + cat.val() + '-' + txt.val() + (withHint ? '-hint' : ''),
+          label: '🔤 えいご ' + title + (show ? '（もじ あり）' : '（きくだけ）') + (withHint ? '（いみ あり）' : '') });
       } })]);
   }
 
