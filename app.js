@@ -2,7 +2,7 @@
   'use strict';
 
   // 🔴 版を あげるときは sw.js の CACHE（sora-quiz-v◯）と いっしょに かえる
-  var VERSION = 'v12';
+  var VERSION = 'v13';
   var D = window.GAME_DATA;
   var app = document.getElementById('app');
   var ROUND = 10;
@@ -183,12 +183,20 @@
   // ---------- ばん（いま うごいている 版と、オフライン用に ほぞんしてある 版） ----------
   function versionNote() {
     var saved = h('span', { text: '' });
-    try {
-      caches.keys().then(function (ks) {
-        var k = ks.filter(function (x) { return /^sora-quiz-/.test(x); }).map(function (x) { return x.replace('sora-quiz-', ''); });
-        saved.textContent = k.length ? '／ ほぞん ' + k.join(',') : '／ ほぞん なし';
-      });
-    } catch (e) {}
+    var tries = 0;
+    // 「さいしんに する」の あとは うらで ほぞんしなおすので、おわるまで ときどき みなおす
+    function check() {
+      if (!document.body.contains(saved) && tries) return;
+      try {
+        caches.keys().then(function (ks) {
+          var k = ks.filter(function (x) { return /^sora-quiz-/.test(x); }).map(function (x) { return x.replace('sora-quiz-', ''); });
+          saved.textContent = k.length ? '／ ほぞん ' + k.join(',') : navigator.onLine ? '／ ほぞん ちゅう…' : '／ ほぞん なし';
+          if (!k.length && tries++ < 30) setTimeout(check, 1000);
+          else if (!k.length) saved.textContent = '／ ほぞん なし';
+        });
+      } catch (e) {}
+    }
+    check();
     return h('p', { class: 'note', style: 'font-size:13px' }, [
       'ばん ' + VERSION + ' ', saved, ' ',
       h('button', { class: 'chip', style: 'font-size:13px;padding:4px 10px;min-width:0', text: '🔄 さいしんに する', onclick: forceUpdate }),
