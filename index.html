@@ -231,7 +231,12 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.addEventListener('controllerchange', function () {
     if (hadController && !reloaded) { reloaded = true; location.reload(); }
   });
-  navigator.serviceWorker.register('sw.js').catch(function () {});
+  navigator.serviceWorker.register('sw.js').then(function (reg) {
+    // ホーム画面の アプリは ひらきなおしても 「つづき」から はじまるので、まえに でてきた たびに あたらしい版を さがす
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible' && navigator.onLine) reg.update().catch(function () {});
+    });
+  }).catch(function () {});
 }
 </script>
 </body>
