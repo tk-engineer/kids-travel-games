@@ -2,7 +2,7 @@
   'use strict';
 
   // 🔴 版を あげるときは sw.js の CACHE（sora-quiz-v◯）と いっしょに かえる
-  var VERSION = 'v13';
+  var VERSION = 'v14';
   var D = window.GAME_DATA;
   var app = document.getElementById('app');
   var ROUND = 10;
@@ -207,8 +207,9 @@
     if (!navigator.onLine) { alert('ネットに つないでから おしてね'); return; }
     if (!confirm('さいしんの 版を よみなおす？')) return;
     var jobs = [];
-    try { jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
-    if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+    // おなじ サイトの ほかの アプリ（ポイントちょきん など）には さわらない
+    try { jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k.indexOf('sora-quiz-') === 0; }).map(function (k) { return caches.delete(k); })); })); } catch (e) {}
+    if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistration().then(function (r) { return r && r.unregister(); }));
     Promise.all(jobs).catch(function () {}).then(function () { location.replace(location.pathname + '?r=' + Date.now()); });
   }
 

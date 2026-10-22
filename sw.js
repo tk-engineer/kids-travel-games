@@ -1,6 +1,6 @@
 // 一度ひらけば、機内（オフライン）でも動くように全部を保存しておく
 // 🔴 版を あげるときは app.js の VERSION と いっしょに かえる
-var CACHE = 'sora-quiz-v13';
+var CACHE = 'sora-quiz-v14';
 var FILES = ['./', 'index.html', 'app.js', 'data.js', 'english.js', 'manifest.json', 'icon-180.png', 'icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
@@ -14,7 +14,8 @@ self.addEventListener('install', function (e) {
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (ks) {
-    return Promise.all(ks.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+    // おなじ サイト（tk-engineer.github.io）の ほかの アプリの ほぞんは けさない
+    return Promise.all(ks.filter(function (k) { return k.indexOf('sora-quiz-') === 0 && k !== CACHE; }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
 self.addEventListener('fetch', function (e) {
