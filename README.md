@@ -14,7 +14,8 @@
 ## しくみ
 
 - `index.html` + `app.js` + `data.js`（地図・国データを焼き込み済み）だけで動く。外部への通信なし
-- `sw.js` が一式をキャッシュするので、一度ひらけばオフラインでも動く
+- `sw.js` が一式をキャッシュするので、一度ひらけばオフラインでも動く。保存のときは必ずサーバーから取り直す（GitHub Pages のブラウザキャッシュ10分に残った古いファイルを保存しないため）
+- 🔴 版を上げるときは `app.js` の `VERSION` と `sw.js` の `CACHE` を同じ番号にそろえる。ホーム画面の下に「ばん（動いている版）／ほぞん（オフライン用に保存している版）」と「🔄 さいしんに する」ボタン
 - 英語の音声: macOS の `say`（Samantha）で作った `audio/en/*.m4a`。作り直しは `cd build && node build-english.js`（単語は `build/english-words.js`）
 - 地図データの作り直し: `cd build && npm install && node build-data.js`
 

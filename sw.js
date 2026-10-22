@@ -1,11 +1,15 @@
 // 一度ひらけば、機内（オフライン）でも動くように全部を保存しておく
-var CACHE = 'sora-quiz-v11';
+// 🔴 版を あげるときは app.js の VERSION と いっしょに かえる
+var CACHE = 'sora-quiz-v12';
 var FILES = ['./', 'index.html', 'app.js', 'data.js', 'english.js', 'manifest.json', 'icon-180.png', 'icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
     // えいごの こえ（audio/en/*.m4a）の いちらんは precache.json に ある
     return fetch('precache.json', { cache: 'no-store' }).then(function (r) { return r.json(); })
-      .then(function (audio) { return c.addAll(FILES.concat(audio)); });
+      .then(function (audio) {
+        // ブラウザの キャッシュ（GitHub Pages は 10ぷん）に のこった ふるい ファイルを ほぞんしないよう、かならず サーバーから とる
+        return c.addAll(FILES.concat(audio).map(function (u) { return new Request(u, { cache: 'reload' }); }));
+      });
   }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {

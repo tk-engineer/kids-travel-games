@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  // 🔴 版を あげるときは sw.js の CACHE（sora-quiz-v◯）と いっしょに かえる
+  var VERSION = 'v12';
   var D = window.GAME_DATA;
   var app = document.getElementById('app');
   var ROUND = 10;
@@ -174,7 +176,32 @@
           onclick: function () { store.set('sound', !sound); home(); } }),
       ]),
       h('p', { class: 'note', style: 'font-size:11px', text: 'ちず: Natural Earth / world-atlas, jpn-atlas（国土地理院 地球地図日本）／ くにの なまえ: mledoze/countries (ODbL)' }),
+      versionNote(),
     ]);
+  }
+
+  // ---------- ばん（いま うごいている 版と、オフライン用に ほぞんしてある 版） ----------
+  function versionNote() {
+    var saved = h('span', { text: '' });
+    try {
+      caches.keys().then(function (ks) {
+        var k = ks.filter(function (x) { return /^sora-quiz-/.test(x); }).map(function (x) { return x.replace('sora-quiz-', ''); });
+        saved.textContent = k.length ? '／ ほぞん ' + k.join(',') : '／ ほぞん なし';
+      });
+    } catch (e) {}
+    return h('p', { class: 'note', style: 'font-size:13px' }, [
+      'ばん ' + VERSION + ' ', saved, ' ',
+      h('button', { class: 'chip', style: 'font-size:13px;padding:4px 10px;min-width:0', text: '🔄 さいしんに する', onclick: forceUpdate }),
+    ]);
+  }
+  // オフライン用の ほぞんを けして、サーバーから よみなおす（ネットが ある ときだけ）
+  function forceUpdate() {
+    if (!navigator.onLine) { alert('ネットに つないでから おしてね'); return; }
+    if (!confirm('さいしんの 版を よみなおす？')) return;
+    var jobs = [];
+    try { jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
+    if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+    Promise.all(jobs).catch(function () {}).then(function () { location.replace(location.pathname + '?r=' + Date.now()); });
   }
 
   // ---------- せってい画面の共通部品 ----------
