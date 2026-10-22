@@ -149,6 +149,7 @@
       ['c8', '➗', 'わりざん', 'かけざんで かんがえよう', divSetup],
       ['c3', '🏳️', 'こっき', 'こっきを みて あてよう', flagSetup],
       ['c9', '🏛️', 'しゅと', 'くにの しゅとを あてよう', capitalSetup],
+      ['c10', '⚔️', 'タイプあいしょう', 'どっちが つよい？', typeSetup],
       ['c4', '🗾', 'にほんちず', 'とどうふけんを あてよう', function () { mapSetup('japan'); }],
       ['c5', '🌏', 'せかいちず', 'くにを あてよう', function () { mapSetup('world'); }],
       ['c7', '🔤', 'えいご', 'きいて えを えらぼう', englishSetup],
@@ -553,6 +554,109 @@
           },
         }, { key: 'cap-' + mode.val() + '-' + area.val(),
           label: '🏛️ しゅと ' + (c2k ? 'くに → しゅと' : 'しゅと → くに') + '（' + areaName + '）' });
+      } })]);
+  }
+
+  // ---------- タイプあいしょう（こうげきする タイプ → うける タイプ） ----------
+  var TYPES = [
+    ['normal', 'ノーマル', '⚪'], ['fire', 'ほのお', '🔥'], ['water', 'みず', '💧'], ['electric', 'でんき', '⚡'],
+    ['grass', 'くさ', '🌿'], ['ice', 'こおり', '❄️'], ['fighting', 'かくとう', '👊'], ['poison', 'どく', '☠️'],
+    ['ground', 'じめん', '🏜️'], ['flying', 'ひこう', '🐦'], ['psychic', 'エスパー', '🔮'], ['bug', 'むし', '🐛'],
+    ['rock', 'いわ', '🪨'], ['ghost', 'ゴースト', '👻'], ['dragon', 'ドラゴン', '🐉'], ['dark', 'あく', '🌙'],
+    ['steel', 'はがね', '⚙️'], ['fairy', 'フェアリー', '🧚'],
+  ].map(function (t) { return { id: t[0], name: t[1], ic: t[2] }; });
+  var TYPE_BY = {};
+  TYPES.forEach(function (t) { TYPE_BY[t.id] = t; });
+  // [ばつぐん（×2）, いまひとつ（×½）, こうかなし（×0）]。かいていない くみあわせは ふつう（×1）
+  var CHART = {
+    normal: [[], ['rock', 'steel'], ['ghost']],
+    fire: [['grass', 'ice', 'bug', 'steel'], ['fire', 'water', 'rock', 'dragon'], []],
+    water: [['fire', 'ground', 'rock'], ['water', 'grass', 'dragon'], []],
+    electric: [['water', 'flying'], ['electric', 'grass', 'dragon'], ['ground']],
+    grass: [['water', 'ground', 'rock'], ['fire', 'grass', 'poison', 'flying', 'bug', 'dragon', 'steel'], []],
+    ice: [['grass', 'ground', 'flying', 'dragon'], ['fire', 'water', 'ice', 'steel'], []],
+    fighting: [['normal', 'ice', 'rock', 'dark', 'steel'], ['poison', 'flying', 'psychic', 'bug', 'fairy'], ['ghost']],
+    poison: [['grass', 'fairy'], ['poison', 'ground', 'rock', 'ghost'], ['steel']],
+    ground: [['fire', 'electric', 'poison', 'rock', 'steel'], ['grass', 'bug'], ['flying']],
+    flying: [['grass', 'fighting', 'bug'], ['electric', 'rock', 'steel'], []],
+    psychic: [['fighting', 'poison'], ['psychic', 'steel'], ['dark']],
+    bug: [['grass', 'psychic', 'dark'], ['fire', 'fighting', 'poison', 'flying', 'ghost', 'steel', 'fairy'], []],
+    rock: [['fire', 'ice', 'flying', 'bug'], ['fighting', 'ground', 'steel'], []],
+    ghost: [['psychic', 'ghost'], ['dark'], ['normal']],
+    dragon: [['dragon'], ['steel'], ['fairy']],
+    dark: [['psychic', 'ghost'], ['fighting', 'dark', 'fairy'], []],
+    steel: [['ice', 'rock', 'fairy'], ['fire', 'water', 'electric', 'steel'], []],
+    fairy: [['fighting', 'dragon', 'dark'], ['fire', 'poison', 'steel'], []],
+  };
+  function mult(a, d) {
+    var c = CHART[a];
+    return c[0].indexOf(d) >= 0 ? 2 : c[1].indexOf(d) >= 0 ? 0.5 : c[2].indexOf(d) >= 0 ? 0 : 1;
+  }
+  var EFFECTS = [
+    { id: 'e2', m: 2, name: 'こうかは ばつぐん', sub: '×2' },
+    { id: 'e1', m: 1, name: 'ふつう', sub: '×1' },
+    { id: 'e05', m: 0.5, name: 'いまひとつ', sub: '×½' },
+    { id: 'e0', m: 0, name: 'こうかなし', sub: '×0' },
+  ];
+  function effectOf(m) { return EFFECTS.filter(function (e) { return e.m === m; })[0]; }
+  function tlabel(t) { return '<span class="tchip t-' + t.id + '">' + t.ic + ' ' + t.name + '</span>'; }
+  var TYPE_EASY = ['fire', 'water', 'grass', 'electric', 'ground', 'flying'];
+
+  function typeSetup() {
+    var mode = chipGroup('あそびかた', [['eff', '⚔️ こうかは どれくらい？'], ['best', '💥 ばつぐんな タイプは どれ？']], 'type-mode', 'eff');
+    var lv = chipGroup('タイプの かず', [['easy', '⭐ 6タイプ（ほのお・みず・くさ・でんき・じめん・ひこう）'], ['all', '⭐⭐⭐ ぜんぶの 18タイプ']], 'type-lv', 'easy');
+    screen([header('タイプあいしょう', home), mode.node, lv.node,
+      h('button', { class: 'go', text: 'スタート！', onclick: function () {
+        var pool = lv.val() === 'easy' ? TYPE_EASY.map(function (id) { return TYPE_BY[id]; }) : TYPES;
+        var eff = mode.val() === 'eff';
+        var qs = [];
+        if (eff) {
+          // ふつう ばかりに ならないよう、こたえの しゅるいを さきに きめる
+          var byM = {};
+          pool.forEach(function (a) { pool.forEach(function (d) { var m = mult(a.id, d.id); (byM[m] = byM[m] || []).push([a, d]); }); });
+          var ms = Object.keys(byM);
+          for (var i = 0; i < ROUND; i++) {
+            var list = byM[ms[rnd(ms.length)]];
+            var pair = list[rnd(list.length)];
+            var e = effectOf(mult(pair[0].id, pair[1].id));
+            qs.push({ item: e, atk: pair[0], def: pair[1], choices: EFFECTS,
+              review: tlabel(pair[0]) + ' → ' + tlabel(pair[1]) + ' は ' + e.name + '（' + e.sub + '）',
+              answerHtml: '<br>' + tlabel(pair[0]) + ' の わざ → ' + tlabel(pair[1]) + '<br>は <b>' + e.name + '（' + e.sub + '）</b>' });
+          }
+        } else {
+          var defs = pool.filter(function (d) { return pool.some(function (a) { return mult(a.id, d.id) === 2; }); });
+          for (var j = 0; j < ROUND; j++) {
+            var d = defs[rnd(defs.length)];
+            var good = pool.filter(function (a) { return mult(a.id, d.id) === 2; });
+            var bad = shuffle(pool.filter(function (a) { return mult(a.id, d.id) < 2; })).slice(0, 3);
+            var a = good[rnd(good.length)];
+            var allGood = TYPES.filter(function (x) { return mult(x.id, d.id) === 2; }).map(tlabel).join(' ');
+            qs.push({ item: a, def: d, choices: shuffle([a].concat(bad)),
+              review: tlabel(d) + ' に ばつぐん → ' + tlabel(a),
+              answerHtml: '<br>' + tlabel(a) + '<br><span class="why">' + tlabel(d) + ' に ばつぐんな タイプ：<br>' + allGood + '</span>' });
+          }
+        }
+        runChoiceQuiz('タイプあいしょう', qs, typeSetup, {
+          body: function (q, answer) {
+            return h('div', { class: 'qbox' }, eff ? [
+              h('div', { class: 'question', html: '<div class="vs">' + tlabel(q.atk) + '<span class="arrow">➡️</span>' + tlabel(q.def) + '</div>' +
+                tlabel(q.atk) + ' の わざで ' + tlabel(q.def) + ' の あいてを<br>こうげき！ こうかは？' }),
+              h('div', { class: 'choices' }, q.choices.map(function (c) {
+                var b = h('button', { class: 'choice', 'data-id': c.id, html: c.name + '<br><span class="why">' + c.sub + '</span>' });
+                b.addEventListener('click', function () { answer(c, b); });
+                return b;
+              })),
+            ] : [
+              h('div', { class: 'question', html: '<div class="vs">' + tlabel(q.def) + '</div>' + tlabel(q.def) + ' の あいてに<br>こうかは ばつぐん！なのは どれ？' }),
+              h('div', { class: 'choices' }, q.choices.map(function (c) {
+                var b = h('button', { class: 'choice', 'data-id': c.id, html: tlabel(c) });
+                b.addEventListener('click', function () { answer(c, b); });
+                return b;
+              })),
+            ]);
+          },
+        }, { key: 'type-' + mode.val() + '-' + lv.val(),
+          label: '⚔️ タイプあいしょう ' + (eff ? 'こうかは どれくらい？' : 'ばつぐんは どれ？') + '（' + (lv.val() === 'easy' ? '6タイプ' : '18タイプ') + '）' });
       } })]);
   }
 
