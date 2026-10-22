@@ -146,7 +146,9 @@
     var tiles = [
       ['c1', '➕', 'けいさん', 'たしざん・ひきざん', mathSetup],
       ['c2', '✖️', 'くく', '1のだん〜9のだん', kukuSetup],
+      ['c8', '➗', 'わりざん', 'かけざんで かんがえよう', divSetup],
       ['c3', '🏳️', 'こっき', 'こっきを みて あてよう', flagSetup],
+      ['c9', '🏛️', 'しゅと', 'くにの しゅとを あてよう', capitalSetup],
       ['c4', '🗾', 'にほんちず', 'とどうふけんを あてよう', function () { mapSetup('japan'); }],
       ['c5', '🌏', 'せかいちず', 'くにを あてよう', function () { mapSetup('world'); }],
       ['c7', '🔤', 'えいご', 'きいて えを えらぼう', englishSetup],
@@ -244,6 +246,32 @@
       } })]);
   }
 
+  // ---------- わりざん（かけざんから かんがえる） ----------
+  function divSetup() {
+    var opts = [['all', 'ぜんぶ']];
+    for (var i = 1; i <= 9; i++) opts.push([i, i + 'で わる']);
+    var dan = chipGroup('なんで わる？（くくの だんと おなじ。いくつでも えらべるよ）', opts, 'div-dan', ['all'], true);
+    var hint = chipGroup('ヒント', [['yes', '💡 ヒント あり（3 × ？ = 12）'], ['no', '🙈 ヒント なし']], 'div-hint', 'yes');
+    screen([header('わりざん', home), dan.node, hint.node,
+      h('p', { class: 'note', text: '12 ÷ 3 は「3 × いくつ で 12 に なる？」と おなじだよ' }),
+      h('button', { class: 'go', text: 'スタート！', onclick: function () {
+        var ds = dan.val().indexOf('all') >= 0 ? [1, 2, 3, 4, 5, 6, 7, 8, 9] : dan.val().slice().sort();
+        var withHint = hint.val() === 'yes';
+        var all = [];
+        ds.forEach(function (d) {
+          for (var j = 1; j <= 9; j++) {
+            all.push({ text: d * j + ' ÷ ' + d, ans: j,
+              hint: withHint ? 'ヒント： ' + d + ' × <b>？</b> = ' + d * j : '',
+              why: d + ' × ' + j + ' = ' + d * j + ' だから' });
+          }
+        });
+        var qs = shuffle(all).slice(0, ROUND);
+        var dl = ds.length === 9 ? 'ぜんぶ' : ds.join('・') + ' で わる';
+        runNumberQuiz('わりざん', qs, divSetup, { key: 'div-' + ds.join('') + (withHint ? '-hint' : ''),
+          label: '➗ わりざん ' + dl + (withHint ? '（ヒント あり）' : '（ヒント なし）') });
+      } })]);
+  }
+
   // ---------- すうじで こたえる クイズ ----------
   function runNumberQuiz(title, qs, again, rec) {
     var i = 0, results = [];
@@ -264,13 +292,13 @@
         clockStop();
         var ok = Number(typed) === q.ans;
         results.push({ ok: ok, q: q.text + ' = ' + q.ans, your: typed });
-        feedback(ok, ok ? '' : q.text + ' = <b>' + q.ans + '</b>', next);
+        feedback(ok, ok ? '' : q.text + ' = <b>' + q.ans + '</b>' + (q.why ? '<br><span class="why">（' + q.why + '）</span>' : ''), next);
       }
       var keys = ['7', '8', '9', '4', '5', '6', '1', '2', '3', 'del', '0', 'ok'];
       screen([
         h('div', { class: 'top' }, [h('button', { class: 'back', onclick: again, text: '← やめる' }), progress(results, qs.length), clockNode()]),
         h('div', { class: 'qbox' }, [
-          h('div', { class: 'question' }, [h('div', { class: 'big', text: q.text + ' =' })]),
+          h('div', { class: 'question' }, [h('div', { class: 'big', text: q.text + ' =' }), q.hint ? h('div', { class: 'qhint', html: q.hint }) : null]),
           h('div', { class: 'answer' }, [ansSpan]),
           h('div', { class: 'pad' }, keys.map(function (k) {
             return h('button', { class: 'key' + (k === 'del' ? ' del' : k === 'ok' ? ' ok' : ''),
@@ -472,6 +500,59 @@
             ]);
           },
         }, flagRec);
+      } })]);
+  }
+
+  // ---------- しゅと（こっきの「ゆうめいな くに」と おなじ くにぐに） ----------
+  var CAPITALS = {
+    JP: ['東京', 'とうきょう'], US: ['ワシントンD.C.'], CN: ['北京', 'ペキン'], KR: ['ソウル'], TW: ['台北', 'タイペイ'], KP: ['平壌', 'ピョンヤン'],
+    MN: ['ウランバートル'], TH: ['バンコク'], VN: ['ハノイ'], PH: ['マニラ'], ID: ['ジャカルタ'], SG: ['シンガポール'],
+    MY: ['クアラルンプール'], IN: ['ニューデリー'], NP: ['カトマンズ'], IR: ['テヘラン'], SA: ['リヤド'], TR: ['アンカラ'],
+    GB: ['ロンドン'], FR: ['パリ'], DE: ['ベルリン'], IT: ['ローマ'], ES: ['マドリード'], PT: ['リスボン'], RU: ['モスクワ'],
+    GR: ['アテネ'], SE: ['ストックホルム'], NO: ['オスロ'], FI: ['ヘルシンキ'], DK: ['コペンハーゲン'], CH: ['ベルン'],
+    NL: ['アムステルダム'], BE: ['ブリュッセル'], AT: ['ウィーン'], IE: ['ダブリン'], PL: ['ワルシャワ'], UA: ['キーウ'],
+    EG: ['カイロ'], ZA: ['プレトリア'], KE: ['ナイロビ'], NG: ['アブジャ'], MA: ['ラバト'],
+    CA: ['オタワ'], MX: ['メキシコシティ'], CU: ['ハバナ'], JM: ['キングストン'], BR: ['ブラジリア'], AR: ['ブエノスアイレス'],
+    PE: ['リマ'], CL: ['サンティアゴ'], CO: ['ボゴタ'], AU: ['キャンベラ'], NZ: ['ウェリントン'],
+  };
+  function capitalOf(c) { var x = CAPITALS[c.id]; return { id: c.id, name: x[0], yomi: x[1] || '' }; }
+  function countryLabel(c) { return '<span class="cflag">' + c.flag + '</span> ' + label(c); }
+  function capitalSetup() {
+    var mode = chipGroup('あそびかた', [['c2k', '🏳️ くに → しゅと'], ['k2c', '🏛️ しゅと → くに']], 'cap-mode', 'c2k');
+    var area = chipGroup('どの あたり？', W_GROUPS, 'cap-area', 'all');
+    screen([header('しゅと', home), mode.node, area.node,
+      h('p', { class: 'note', text: 'しゅと ＝ その くにの いちばん だいじな まち（せいふが ある ところ）' }),
+      h('button', { class: 'go', text: 'スタート！', onclick: function () {
+        var all = D.world.items.filter(function (c) { return CAPITALS[c.id]; });
+        var pool = all.filter(function (c) { return area.val() === 'all' || c.group === area.val(); });
+        if (pool.length < 4) pool = all;
+        var c2k = mode.val() === 'c2k';
+        var qs = shuffle(pool).slice(0, ROUND).map(function (c) {
+          var others = pick(all, 3, [c]);
+          var cap = capitalOf(c);
+          var ans = '<br>' + countryLabel(c) + ' の しゅとは<br><span class="big">' + label(cap) + '</span>';
+          return c2k
+            ? { item: cap, country: c, choices: shuffle([cap].concat(others.map(capitalOf))), review: countryLabel(c) + ' → ' + label(cap), answerHtml: ans }
+            : { item: c, cap: cap, choices: shuffle([c].concat(others)), review: label(cap) + ' → ' + countryLabel(c), answerHtml: ans };
+        });
+        var areaName = area.val() === 'all' ? 'ぜんぶ' : area.val();
+        runChoiceQuiz('しゅと', qs, capitalSetup, {
+          body: function (q, answer) {
+            return h('div', { class: 'qbox' }, c2k ? [
+              h('div', { class: 'flagbig', text: q.country.flag }),
+              h('div', { class: 'question', html: '<span class="big">' + label(q.country) + '</span><br>の しゅとは どこ？' }),
+              choiceButtons(q, answer, false),
+            ] : [
+              h('div', { class: 'question', html: '<span class="big">' + label(q.cap) + '</span><br>は どこの くにの しゅと？' }),
+              h('div', { class: 'choices' }, q.choices.map(function (c) {
+                var b = h('button', { class: 'choice', 'data-id': c.id, html: countryLabel(c) });
+                b.addEventListener('click', function () { answer(c, b); });
+                return b;
+              })),
+            ]);
+          },
+        }, { key: 'cap-' + mode.val() + '-' + area.val(),
+          label: '🏛️ しゅと ' + (c2k ? 'くに → しゅと' : 'しゅと → くに') + '（' + areaName + '）' });
       } })]);
   }
 
