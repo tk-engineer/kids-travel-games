@@ -150,6 +150,7 @@
       ['c3', '🏳️', 'こっき', 'こっきを みて あてよう', flagSetup],
       ['c9', '🏛️', 'しゅと', 'くにの しゅとを あてよう', capitalSetup],
       ['c10', '⚔️', 'タイプあいしょう', 'どっちが つよい？', typeSetup],
+      ['c11', '🔢', '2048', 'おなじ かずを くっつけよう', game2048],
       ['c4', '🗾', 'にほんちず', 'とどうふけんを あてよう', function () { mapSetup('japan'); }],
       ['c5', '🌏', 'せかいちず', 'くにを あてよう', function () { mapSetup('world'); }],
       ['c7', '🔤', 'えいご', 'きいて えを えらぼう', englishSetup],
@@ -658,6 +659,143 @@
         }, { key: 'type-' + mode.val() + '-' + lv.val(),
           label: '⚔️ タイプあいしょう ' + (eff ? 'こうかは どれくらい？' : 'ばつぐんは どれ？') + '（' + (lv.val() === 'easy' ? '6タイプ' : '18タイプ') + '）' });
       } })]);
+  }
+
+  // ---------- 2048（もとの ゲーム: Gabriele Cirulli「2048」MIT。ルールだけ おなじに つくりなおし） ----------
+  var N4 = 4;
+  function g2048New() {
+    var g = { cells: [], score: 0, won: false, keep: false, prev: null };
+    for (var i = 0; i < N4 * N4; i++) g.cells.push(0);
+    g2048Add(g); g2048Add(g);
+    return g;
+  }
+  function g2048Add(g) {
+    var empty = [];
+    g.cells.forEach(function (v, i) { if (!v) empty.push(i); });
+    if (!empty.length) return -1;
+    var at = empty[rnd(empty.length)];
+    g.cells[at] = Math.random() < 0.9 ? 2 : 4;
+    return at;
+  }
+  // dir: 0=うえ 1=みぎ 2=した 3=ひだり。うごいたら { moved, gained, merged: [いち] }
+  function g2048Move(g, dir) {
+    var moved = false, gained = 0, merged = [];
+    for (var line = 0; line < N4; line++) {
+      var idx = [];
+      for (var k = 0; k < N4; k++) {
+        var r = dir === 0 ? k : dir === 2 ? N4 - 1 - k : line;
+        var c = dir === 3 ? k : dir === 1 ? N4 - 1 - k : line;
+        idx.push(r * N4 + c);
+      }
+      var vals = idx.map(function (i) { return g.cells[i]; }).filter(Boolean);
+      var out = [], outMerged = [];
+      for (var j = 0; j < vals.length; j++) {
+        if (j + 1 < vals.length && vals[j] === vals[j + 1]) {
+          out.push(vals[j] * 2); outMerged.push(true); gained += vals[j] * 2; j++;
+        } else { out.push(vals[j]); outMerged.push(false); }
+      }
+      while (out.length < N4) { out.push(0); outMerged.push(false); }
+      idx.forEach(function (i, n) {
+        if (g.cells[i] !== out[n]) moved = true;
+        g.cells[i] = out[n];
+        if (outMerged[n]) merged.push(i);
+      });
+    }
+    return { moved: moved, gained: gained, merged: merged };
+  }
+  function g2048CanMove(g) {
+    for (var i = 0; i < N4 * N4; i++) {
+      if (!g.cells[i]) return true;
+      if (i % N4 < N4 - 1 && g.cells[i] === g.cells[i + 1]) return true;
+      if (i + N4 < N4 * N4 && g.cells[i] === g.cells[i + N4]) return true;
+    }
+    return false;
+  }
+  function game2048() {
+    var g = store.get('g2048', null) || g2048New();
+    var best = store.get('g2048-best', 0);
+    var board = h('div', { class: 'g48' });
+    var scoreEl = h('div', { class: 'stars' }), bestEl = h('div', { class: 'stars' });
+    var msg = h('div', { class: 'g48msg' });
+    var undoBtn = h('button', { class: 'go ghost', text: '↩️ 1かい もどる', onclick: function () {
+      if (!g.prev) return;
+      g.cells = g.prev.cells; g.score = g.prev.score; g.prev = null; draw([], -1);
+    } });
+    function draw(merged, born) {
+      board.innerHTML = '';
+      g.cells.forEach(function (v, i) {
+        var cls = 'g48c' + (v ? ' v' + Math.min(v, 4096) : '') + (merged.indexOf(i) >= 0 ? ' pop' : '') + (i === born ? ' born' : '');
+        board.appendChild(h('div', { class: cls, text: v ? String(v) : '' }));
+      });
+      if (g.score > best) { best = g.score; store.set('g2048-best', best); }
+      scoreEl.textContent = 'てん ' + g.score;
+      bestEl.textContent = '🏆 ' + best;
+      undoBtn.disabled = !g.prev;
+      undoBtn.style.opacity = g.prev ? 1 : 0.4;
+      msg.innerHTML = '';
+      if (!g2048CanMove(g)) {
+        msg.appendChild(h('div', { class: 'card' }, [
+          h('div', { class: 'msg', text: 'もう うごかせないよ' }),
+          h('div', { class: 'ans', text: 'てん ' + g.score + (g.score >= best ? '　🏆 しんきろく！' : '') }),
+          h('button', { class: 'go', text: '🔁 もういちど', onclick: restart }),
+        ]));
+      } else if (g.won && !g.keep) {
+        msg.appendChild(h('div', { class: 'card' }, [
+          h('div', { class: 'mark', text: '🎉' }),
+          h('div', { class: 'msg', text: '2048 できた！ すごい！' }),
+          h('button', { class: 'go', text: '▶ まだ つづける', onclick: function () { g.keep = true; save(); draw([], -1); } }),
+        ]));
+      }
+      save();
+    }
+    function save() { store.set('g2048', { cells: g.cells, score: g.score, won: g.won, keep: g.keep, prev: g.prev }); }
+    function restart() { g = g2048New(); draw([], -1); }
+    function move(dir) {
+      if (!g2048CanMove(g) || (g.won && !g.keep)) return;
+      var before = { cells: g.cells.slice(), score: g.score };
+      var r = g2048Move(g, dir);
+      if (!r.moved) return;
+      g.prev = before;
+      g.score += r.gained;
+      if (!g.won && g.cells.some(function (v) { return v >= 2048; })) { g.won = true; confetti(); }
+      if (r.gained) beep(true);
+      var born = g2048Add(g);
+      draw(r.merged, born);
+    }
+    // スワイプ（iPad）と やじるしキー（Mac）
+    var sx = null, sy = null;
+    board.addEventListener('touchstart', function (e) { var t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+    board.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+    board.addEventListener('touchend', function (e) {
+      if (sx == null) return;
+      var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+      move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
+    });
+    var px = null, py = null;
+    board.addEventListener('mousedown', function (e) { px = e.clientX; py = e.clientY; });
+    board.addEventListener('mouseup', function (e) {
+      if (px == null) return;
+      var dx = e.clientX - px, dy = e.clientY - py; px = null;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+      move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0));
+    });
+    function onKey(e) {
+      if (!document.body.contains(board)) { document.removeEventListener('keydown', onKey); return; }
+      var d = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }[e.key];
+      if (d != null) { e.preventDefault(); move(d); }
+    }
+    document.addEventListener('keydown', onKey);
+    screen([
+      h('div', { class: 'top' }, [h('button', { class: 'back', onclick: home, text: '← もどる' }), h('h1', { text: '2048' }), scoreEl, bestEl]),
+      h('p', { class: 'note', style: 'margin-top:0', text: 'ゆびで スーッと うごかして、おなじ かずを くっつけよう。2048 を つくれるかな？' }),
+      h('div', { class: 'g48wrap' }, [board, msg]),
+      h('div', { class: 'row', style: 'margin-top:14px' }, [undoBtn, h('button', { class: 'go ghost', text: '🆕 はじめから', onclick: function () {
+        if (g.score === 0 || confirm('はじめから やりなおす？')) restart();
+      } })]),
+      h('p', { class: 'note', style: 'font-size:11px', text: 'もとの ゲーム: 2048 by Gabriele Cirulli (MIT License)' }),
+    ]);
+    draw([], -1);
   }
 
   // ---------- えいご ----------
