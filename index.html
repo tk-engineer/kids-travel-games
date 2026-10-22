@@ -86,19 +86,23 @@ ruby rt { font-size: 0.5em; font-weight: 600; color: var(--sub); }
 .tile.c10 { border-top: 8px solid #e04f8a; }
 .tile.c11 { border-top: 8px solid #edc22e; }
 .g48wrap { position: relative; width: min(100%, 520px, 62vh); margin: 0 auto; }
-.g48 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; background: #bbada0; border-radius: 18px; aspect-ratio: 1; touch-action: none; }
-.g48c { border-radius: 10px; background: #cdc1b4; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: clamp(22px, 7vw, 48px); color: #776e65; font-family: -apple-system, "Helvetica Neue", sans-serif; }
-.g48c.v2 { background: #eee4da; } .g48c.v4 { background: #ede0c8; }
-.g48c.v8 { background: #f2b179; color: #fff; } .g48c.v16 { background: #f59563; color: #fff; }
-.g48c.v32 { background: #f67c5f; color: #fff; } .g48c.v64 { background: #f65e3b; color: #fff; }
-.g48c.v128, .g48c.v256, .g48c.v512 { background: #edcf72; color: #fff; font-size: clamp(20px, 6vw, 40px); }
-.g48c.v1024, .g48c.v2048 { background: #edc53f; color: #fff; font-size: clamp(16px, 5vw, 34px); }
-.g48c.v4096 { background: #3c3a32; color: #fff; font-size: clamp(16px, 5vw, 34px); }
-.g48c.pop { animation: g48pop .15s; } .g48c.born { animation: g48born .2s; }
+/* 正方形は aspect-ratio を使わずに作る（古い iPad の Safari でも つぶれないように） */
+.g48 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; background: #bbada0; border-radius: 18px; touch-action: none; }
+.g48c { position: relative; min-width: 0; }
+.g48c::before { content: ''; display: block; padding-top: 100%; }
+.g48c span { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+.g48c span { border-radius: 10px; background: #cdc1b4; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: clamp(22px, 7vw, 48px); color: #776e65; font-family: -apple-system, "Helvetica Neue", sans-serif; }
+.g48c .v2 { background: #eee4da; } .g48c .v4 { background: #ede0c8; }
+.g48c .v8 { background: #f2b179; color: #fff; } .g48c .v16 { background: #f59563; color: #fff; }
+.g48c .v32 { background: #f67c5f; color: #fff; } .g48c .v64 { background: #f65e3b; color: #fff; }
+.g48c .v128, .g48c .v256, .g48c .v512 { background: #edcf72; color: #fff; font-size: clamp(20px, 6vw, 40px); }
+.g48c .v1024, .g48c .v2048 { background: #edc53f; color: #fff; font-size: clamp(16px, 5vw, 34px); }
+.g48c .v4096 { background: #3c3a32; color: #fff; font-size: clamp(16px, 5vw, 34px); }
+.g48c .pop { animation: g48pop .15s; } .g48c .born { animation: g48born .2s; }
 @keyframes g48pop { 50% { transform: scale(1.15); } }
 @keyframes g48born { from { transform: scale(0.2); opacity: 0; } }
 .g48msg:empty { display: none; }
-.g48msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #fff8; border-radius: 18px; }
+.g48msg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: #fff8; border-radius: 18px; }
 .g48msg .card { background: #fff; border-radius: 24px; padding: 20px 28px; text-align: center; box-shadow: 0 10px 30px #0003; }
 .g48msg .msg { font-size: 28px; font-weight: 800; } .g48msg .mark { font-size: 64px; }
 .tchip { display: inline-block; padding: 2px 12px; border-radius: 999px; background: #eef2f7; white-space: nowrap; }

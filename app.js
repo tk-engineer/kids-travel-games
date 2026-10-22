@@ -724,8 +724,8 @@
     function draw(merged, born) {
       board.innerHTML = '';
       g.cells.forEach(function (v, i) {
-        var cls = 'g48c' + (v ? ' v' + Math.min(v, 4096) : '') + (merged.indexOf(i) >= 0 ? ' pop' : '') + (i === born ? ' born' : '');
-        board.appendChild(h('div', { class: cls, text: v ? String(v) : '' }));
+        var cls = (v ? 'v' + Math.min(v, 4096) : '') + (merged.indexOf(i) >= 0 ? ' pop' : '') + (i === born ? ' born' : '');
+        board.appendChild(h('div', { class: 'g48c' }, [h('span', { class: cls, text: v ? String(v) : '' })]));
       });
       if (g.score > best) { best = g.score; store.set('g2048-best', best); }
       scoreEl.textContent = 'てん ' + g.score;
